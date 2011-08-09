@@ -1,0 +1,8 @@
+CMakeLists.txt
+googletranslate.cpp
+googletranslate.h
+googletranslatehttp.cpp
+googletranslatehttp.h
+googletranslateutil.cpp
+googletranslateutil.h
+plasma-runner-googletranslate.desktop

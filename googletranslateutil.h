@@ -49,6 +49,6 @@ public:
     static QStringList parseResult(const QString &text);
 
 private:
-    static QString getWordFromJson(const QVariantList &json);
+    static QStringList getWordFromJson(const QVariantList &json);
 };
 #endif

@@ -42,7 +42,7 @@ GoogleTranslateRunner::GoogleTranslateRunner(QObject* parent, const QVariantList
                     Plasma::RunnerContext::ShellCommand);
     setSpeed(AbstractRunner::SlowSpeed);
 
-    addSyntax(Plasma::RunnerSyntax("gt=", i18n("Translate the word")));
+    addSyntax(Plasma::RunnerSyntax("[ISO-from]=[word to translate]=[ISO-to]", i18n("Translate the word")));
 }
 
 GoogleTranslateRunner::~GoogleTranslateRunner()
@@ -78,7 +78,7 @@ void GoogleTranslateRunner::match(Plasma::RunnerContext &context)
             Plasma::QueryMatch match(this);
             match.setType(Plasma::QueryMatch::ExactMatch);
 
-            match.setIcon(KIcon("dialog-ok-apply"));
+            match.setIcon(KIcon("applications-education-language"));
             match.setText(word);
 
             context.addMatch(term, match);

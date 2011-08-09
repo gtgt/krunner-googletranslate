@@ -29,14 +29,11 @@
 
 bool GoogleTranslateUtil::isSearchTerm(const QString &term)
 {
-    qDebug() << "GoogleTranslateUtil::isSearchTerm -> contains = " << term.contains("=");
-
     if (term.contains("=")) {
         QPair <QString, QString> languages = getLanguages(term);
-        return KGlobal::locale()->allLanguagesList().contains(languages.first) &&
+        return languages.first != "" && languages.second != "" && KGlobal::locale()->allLanguagesList().contains(languages.first) &&
                KGlobal::locale()->allLanguagesList().contains(languages.second);
     }
-
     return false;
 }
 
@@ -44,32 +41,18 @@ QPair <QString, QString> GoogleTranslateUtil::getLanguages(const QString &term)
 {
     int firstIndex = term.indexOf("=");
     int lastIndex  = term.lastIndexOf("=");
-
-    QString firstLanguage = (term.count("=") >= 2) ? term.left(firstIndex) :
-        KGlobal::locale()->language();
-    QString secondLanguage = (lastIndex > 0) ? term.right(term.size() - ( lastIndex + 1)) : "";
-
-    if (firstLanguage.contains("_")) {
-        firstLanguage = firstLanguage.left(firstLanguage.indexOf("_"));
-    }
-
-    qDebug() << "GoogleTranslateUtil::getLanguages -> first = " << firstLanguage;
-    qDebug() << "GoogleTranslateUtil::getLanguages -> second = " << secondLanguage;
-
-    return QPair<QString, QString>(firstLanguage, secondLanguage);
-/**
-
+    //qDebug() << "Lang : " << term.left(firstIndex) + " and " + term.right(term.size() - (lastIndex + 1));
     if (firstIndex > 0 && lastIndex > firstIndex) {
-        return QPair<QString, QString>(term.left(firstIndex), term.right(term.size() - lastIndex + 1));
+        return QPair<QString, QString>(term.left(firstIndex), term.right(term.size() - (lastIndex + 1)));
     }
     else {
         return QPair<QString, QString>("", "");
-    }**/
+    }
 }
 
 QString GoogleTranslateUtil::getSearchWord(const QString &term)
 {
-    QRegExp rx((term.count("=") >= 2) ? "\\w{2,3}=(.*)=\\w{2,3}" : "(.*)=\\w{2,3}");
+    QRegExp rx("\\w{2,3}=(.*)=\\w{2,3}");
     QString value = "";
 
     int pos = rx.indexIn(term, 0);
@@ -82,41 +65,54 @@ QString GoogleTranslateUtil::getSearchWord(const QString &term)
 
 QStringList GoogleTranslateUtil::parseResult(const QString &text)
 {
-    QString jsonData = QString(text).replace(",,", ",");
+	QString jsonData = QString(text).replace(QRegExp(",{2,}"), ",");
+	//jsonData = QString(jsonData).replace(QRegExp("\\[{2}"), "[");
+	//jsonData = QString(jsonData).replace(QRegExp("\\]{2}"), "]");
 
     QStringList result;
     QJson::Parser parser;
     bool ok;
-    qDebug() << "Parse result = " << text;
+    qDebug() << "Parse result = " << jsonData;
     QVariantList json = parser.parse(jsonData.toUtf8(), &ok).toList();
     if (ok) {
         foreach(const QVariant &data, json) {
+            qDebug() << "Parse sub-result = " << data.toString();
             QVariantList list = data.toList();
-            if (list.size() >= 1)
-                result.append(getWordFromJson(list));
+            if (list.size() >= 1) {
+              QStringList res = getWordFromJson(list);
+              if (res.size() > 0)  result << res;
+            }
         }
     }
     else {
-        result << "Error getting data : " << parser.errorString();
+      result << "Error getting data : " << parser.errorString() + " " + jsonData;
     }
 
     return result;
 }
 
-QString GoogleTranslateUtil::getWordFromJson(const QVariantList &json)
+QStringList GoogleTranslateUtil::getWordFromJson(const QVariantList &json)
 {
-    QString result = "";
+    QStringList result;
 
-    result.append(json.at(0).toList().at(0).toString());
 
     if (json.at(0).toList().size() > 1) {
-        QVariantList moreData = json.at(0).toList().at(1).toList();
-
-        if (moreData.size() > 0) result.append(" : ");
-
+      QVariantList moreData = json.at(0).toList().at(1).toList();
+      if (moreData.size() > 0) {
+        qDebug() << "More data = " << "(" << moreData.size() << ")" << json.at(0).toList().at(0).toString();
         foreach(const QVariant &data, moreData) {
-            result.append(" " + data.toString());
+            if (!QRegExp("[0-9]").exactMatch(data.toString())) {
+              result << QString("[" + json.at(0).toList().at(0).toString() + "] " + data.toString());
+              qDebug() << "Found: " << data.toString();
+            }
         }
+      } else {
+        if (!QRegExp("[0-9]").exactMatch(json.at(0).toList().at(1).toString())) {
+          qDebug() << "Simple data" << json.at(0).toList().at(1).toString() << " : " << json.at(0).toList().at(0).toString();
+          //result.append(json.at(0).toList().at(1).toString() + " : " + json.at(0).toList().at(0).toString());
+          result << QString(" " + json.at(0).toList().at(0).toString());
+        }
+      }
     }
 
     return result;
